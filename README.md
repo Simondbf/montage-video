@@ -44,13 +44,14 @@ Dans la zone DNS de `soleiljaune.be`, ajoute un enregistrement **A**
 
 ### 3. nginx et le certificat
 
-Le fichier de configuration est dans le dépôt, sous
-`etc/nginx/sites-available/montage.soleiljaune.be`. Il doit se trouver sur le
-serveur à ce même chemin, `/etc/nginx/sites-available/montage.soleiljaune.be`,
-avant de l'activer :
+nginx ne lit pas le dossier du dépôt : le fichier doit exister dans
+`/etc/nginx/sites-available/` avant d'être activé, sinon `nginx -t` échoue.
+Ouvre-le avec `nano /etc/nginx/sites-available/montage.soleiljaune.be`, colle
+le contenu de `etc/nginx/sites-available/montage.soleiljaune.be` (dans le
+dépôt), puis enregistre (Ctrl+O, Entrée, Ctrl+X). Ensuite :
 
 ```bash
-ln -s /etc/nginx/sites-available/montage.soleiljaune.be /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/montage.soleiljaune.be /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 certbot --nginx -d montage.soleiljaune.be
 ```
