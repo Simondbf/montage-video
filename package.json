@@ -1,0 +1,17 @@
+{
+  "name": "montage-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Des photos, des vidéos et une musique : une vidéo montée sur le rythme.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "exifr": "^7.1.3",
+    "express": "^4.21.2"
+  }
+}

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Montage</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='7' width='26' height='18' rx='3' fill='%230f766e'/%3E%3Cpath d='M13 12v8l7-4z' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ------------------------------ Connexion ------------------------------ -->
+<div id="vue-connexion" class="vue" hidden>
+  <main class="connexion">
+    <h1 class="logo">Montage</h1>
+    <form id="form-connexion">
+      <label class="champ"><span>Mot de passe</span><input type="password" id="mdp" autocomplete="current-password" required></label>
+      <button class="bouton principal" type="submit">Entrer</button>
+      <p id="connexion-erreur" class="erreur" role="alert"></p>
+    </form>
+  </main>
+</div>
+
+<!-- ------------------------------ Accueil ------------------------------ -->
+<div id="vue-accueil" class="vue" hidden>
+  <header class="barre">
+    <a class="logo" href="#/">Montage</a>
+    <span class="espace"></span>
+    <button class="lien" type="button" data-action="deconnexion">Se déconnecter</button>
+  </header>
+  <main class="page">
+    <section class="intro">
+      <h1>Tes photos et tes vidéos, montées sur une musique</h1>
+      <p class="discret">Envoie les photos et vidéos d'un voyage avec une musique. Le site les range par date, écarte les photos floues et les doublons, prend le meilleur passage de chaque vidéo, et change d'image pile sur les temps de la musique.</p>
+      <form id="form-projet" class="ligne">
+        <input type="text" id="nom-projet" maxlength="80" placeholder="Nom du projet, par exemple Angleterre 2026" aria-label="Nom du projet" required>
+        <button class="bouton principal" type="submit">Créer le projet</button>
+      </form>
+    </section>
+    <p id="aucun-projet" class="discret" hidden>Aucun projet pour l'instant.</p>
+    <ul id="liste-projets" class="projets"></ul>
+  </main>
+</div>
+
+<!-- ------------------------------ Projet ------------------------------ -->
+<div id="vue-projet" class="vue" hidden>
+  <header class="barre">
+    <a class="lien" href="#/">Tous les projets</a>
+    <input type="text" id="titre-projet" class="titre" maxlength="80" aria-label="Nom du projet">
+    <span class="espace"></span>
+    <span id="sauvegarde" class="discret petit" aria-live="polite"></span>
+  </header>
+  <main class="page projet">
+    <section class="bloc ajout" id="zone-ajout">
+      <div class="ajout-texte">
+        <h2>Ajouter des fichiers</h2>
+        <p class="discret">Photos (JPEG, PNG), vidéos (MP4, MOV) et au moins une musique (MP3, M4A, WAV…). Tu peux en envoyer plusieurs d'un coup, ou les glisser ici.</p>
+      </div>
+      <label class="bouton principal" for="fichiers">Choisir des fichiers</label>
+      <input id="fichiers" class="cache" type="file" multiple accept="image/jpeg,image/png,image/webp,video/*,audio/*,.mp3,.m4a,.wav,.flac,.ogg,.opus,.mov,.mp4">
+      <div id="envoi" class="envoi" hidden>
+        <div class="barre-progres"><div></div></div>
+        <p id="envoi-texte" class="petit" aria-live="polite"></p>
+      </div>
+      <p id="analyse-texte" class="petit discret" aria-live="polite"></p>
+      <p id="ajout-erreurs" class="erreur petit" role="alert"></p>
+    </section>
+
+    <div class="deux-colonnes">
+      <section class="bloc apercu-bloc">
+        <h2>Aperçu</h2>
+        <div id="scene" class="scene paysage">
+          <div class="fond" id="scene-fond"></div>
+          <img id="scene-image" alt="">
+          <video id="scene-video" muted playsinline preload="auto"></video>
+          <p id="scene-message" class="scene-message"></p>
+        </div>
+        <div class="lecture">
+          <button class="bouton" type="button" id="lire" disabled>Lire</button>
+          <div id="frise" class="frise" role="slider" tabindex="0" aria-label="Position dans le montage" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><div class="frise-avance"></div></div>
+          <span id="temps" class="temps">0:00 / 0:00</span>
+        </div>
+        <p id="resume" class="resume" aria-live="polite"></p>
+        <p class="discret petit">L'aperçu montre le rythme et l'ordre, en qualité réduite. La vraie vidéo se fabrique avec le bouton « Fabriquer la vidéo ».</p>
+        <audio id="audio" preload="auto"></audio>
+      </section>
+
+      <section class="bloc reglages">
+        <h2>Musique</h2>
+        <ul id="liste-musiques" class="musiques"></ul>
+        <p id="sans-musique" class="discret petit" hidden>Aucune musique pour l'instant : ajoute un MP3 ou un autre fichier audio.</p>
+
+        <h2>Réglages</h2>
+        <div class="choix-groupe" role="radiogroup" aria-label="Format">
+          <span class="etiquette">Format</span>
+          <label><input type="radio" name="format" value="paysage"> Paysage 16:9 (écran, télé)</label>
+          <label><input type="radio" name="format" value="vertical"> Vertical 9:16 (téléphone)</label>
+        </div>
+        <div class="choix-groupe" role="radiogroup" aria-label="Durée d'une photo">
+          <span class="etiquette">Une photo dure</span>
+          <label><input type="radio" name="tempsPhoto" value="1"> 1 temps</label>
+          <label><input type="radio" name="tempsPhoto" value="2"> 2 temps</label>
+          <label><input type="radio" name="tempsPhoto" value="4"> 4 temps</label>
+        </div>
+        <div class="choix-groupe" role="radiogroup" aria-label="Durée d'une vidéo">
+          <span class="etiquette">Une vidéo dure</span>
+          <label><input type="radio" name="tempsVideo" value="2"> 2 temps</label>
+          <label><input type="radio" name="tempsVideo" value="4"> 4 temps</label>
+          <label><input type="radio" name="tempsVideo" value="8"> 8 temps</label>
+        </div>
+        <label class="case"><input type="checkbox" id="zoom"> Zoom lent sur les photos</label>
+
+        <h2>Vidéo finale</h2>
+        <button class="bouton principal large" type="button" id="fabriquer">Fabriquer la vidéo</button>
+        <p id="fabriquer-message" class="petit" aria-live="polite"></p>
+        <ul id="liste-exports" class="exports"></ul>
+      </section>
+    </div>
+
+    <section class="bloc">
+      <div class="entete-section">
+        <h2>Déroulé</h2>
+        <button class="lien" type="button" id="ordre-date" hidden>Revenir à l'ordre des dates</button>
+      </div>
+      <p class="discret petit">Dans l'ordre de la vidéo. Les éléments grisés sont mis de côté ; « Garder » les remet. Touche une image pour la voir dans l'aperçu.</p>
+      <ol id="deroule" class="deroule"></ol>
+    </section>
+
+    <section class="bloc danger-zone">
+      <button class="lien danger" type="button" id="supprimer-projet">Supprimer ce projet et tous ses fichiers</button>
+    </section>
+  </main>
+</div>
+
+<div id="annonce" class="annonce" role="status" aria-live="polite" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Site de montage.
+#
+# Avant le premier lancement (voir README) :
+#   mkdir -p data && chown 1000:1000 data
+
+services:
+  montage:
+    build: .
+    container_name: montage-video
+    restart: unless-stopped
+    environment:
+      # Vide : pas de mot de passe. Pour en mettre un, écrire dans un fichier
+      # .env à côté de ce fichier : MOT_DE_PASSE=… (8 caractères au moins).
+      MOT_DE_PASSE: ${MOT_DE_PASSE:-}
+    volumes:
+      # Projets : photos, vidéos, musiques d'origine et vidéos fabriquées.
+      - ./data:/data
+    ports:
+      # Toujours préfixer par 127.0.0.1 : sans lui, Docker ouvre le port sur
+      # Internet en passant devant le pare-feu. Seul nginx doit le joindre.
+      - "127.0.0.1:3013:3013"
