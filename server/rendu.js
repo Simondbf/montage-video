@@ -8,7 +8,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { executer, FFMPEG, derniereLigne } from './outils.js';
 import { filtreOrientation } from './medias.js';
-import { FPS, FORMATS, remplit } from '../public/plan.js';
+import { FPS, remplit } from '../public/plan.js';
 
 const n3 = (v) => (Math.round(v * 1000) / 1000).toString();
 
@@ -31,15 +31,18 @@ const fondus = (nbImages, { premier, dernier }) => {
   return f.length ? `,${f.join(',')}` : '';
 };
 
-const encodage = ['-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-r', String(FPS)];
+// Qualité élevée : la vidéo finale est faite pour être gardée.
+const encodage = ['-an', '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-r', String(FPS)];
 
-export const commandeClipPhoto = ({ entree, media, element, format, sortie, premier, dernier }) => {
-  const { largeur: W, hauteur: H } = FORMATS[format];
+export const commandeClipPhoto = ({ entree, media, element, format, W, H, sortie, premier, dernier }) => {
   const N = element.f1 - element.f0;
   const orient = filtreOrientation(media.orientation);
-  // Composition au double de la taille : le zoom lent reste fluide.
+  // Composition plus grande que l'image finale : le zoom lent reste fluide
+  // (double en Full HD, une fois et demie en 4K).
+  const k = H > 1080 && W > 1080 ? 1.5 : 2;
+  const CW = 2 * Math.round((W * k) / 2), CH = 2 * Math.round((H * k) / 2);
   const graphe = [`[0:v]${orient ? `${orient},` : ''}format=yuv420p[src]`,
-    ...composition('src', 'c', 2 * W, 2 * H, remplit(media.largeur, media.hauteur, format))];
+    ...composition('src', 'c', CW, CH, remplit(media.largeur, media.hauteur, format))];
   const z = element.zoom;
   const zoom = z ? `'${n3(z.de)}+${n3(z.a - z.de)}*on/${Math.max(1, N - 1)}'` : '1';
   const px = z ? n3(z.px) : '0.5', py = z ? n3(z.py) : '0.5';
@@ -47,8 +50,7 @@ export const commandeClipPhoto = ({ entree, media, element, format, sortie, prem
   return ['-hide_banner', '-nostats', '-y', '-noautorotate', '-i', entree, '-filter_complex', graphe.join(';'), '-map', '[v]', '-frames:v', String(N), ...encodage, sortie];
 };
 
-export const commandeClipVideo = ({ entree, media, element, format, sortie, premier, dernier }) => {
-  const { largeur: W, hauteur: H } = FORMATS[format];
+export const commandeClipVideo = ({ entree, media, element, format, W, H, sortie, premier, dernier }) => {
   const N = element.f1 - element.f0;
   const graphe = [`[0:v]setpts=PTS-STARTPTS,fps=${FPS},format=yuv420p[src]`,
     ...composition('src', 'c', W, H, remplit(media.largeur, media.hauteur, format))];
@@ -66,13 +68,14 @@ export const commandeAssemblage = ({ liste, musique, decalage, duree, sortie }) 
   return ['-hide_banner', '-nostats', '-y', '-f', 'concat', '-safe', '0', '-i', liste,
     ...(decalage > 0 ? ['-ss', n3(decalage)] : []), '-i', musique,
     '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'copy', '-af', filtres.join(','),
-    '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-t', n3(duree), '-movflags', '+faststart', sortie];
+    '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-t', n3(duree), '-movflags', '+faststart', sortie];
 };
 
 // Rend tout le plan. cheminMedia(media) donne le fichier d'origine.
 export const rendre = async ({ plan, projet, cheminMedia, dossierTravail, sortie, progres = () => {}, signal }) => {
   if (plan.erreur) throw new Error({ musique: 'Ajoute une musique d\'abord.', 'musique-en-cours': 'La musique est encore en cours d\'analyse.', vide: 'Aucune photo ni vidéo à monter.' }[plan.erreur] || plan.erreur);
-  const format = FORMATS[projet.reglages.format] ? projet.reglages.format : 'paysage';
+  const format = plan.format;
+  const W = plan.largeur, H = plan.hauteur;
   await rm(dossierTravail, { recursive: true, force: true });
   await mkdir(dossierTravail, { recursive: true });
   try {
@@ -82,7 +85,7 @@ export const rendre = async ({ plan, projet, cheminMedia, dossierTravail, sortie
       if (signal?.aborted) throw new Error('annulé');
       const media = projet.medias[element.id];
       const clip = path.join(dossierTravail, `clip-${String(i).padStart(5, '0')}.mp4`);
-      const options = { entree: cheminMedia(media), media, element, format, sortie: clip, premier: i === 0, dernier: i === nb - 1 };
+      const options = { entree: cheminMedia(media), media, element, format, W, H, sortie: clip, premier: i === 0, dernier: i === nb - 1 };
       const args = element.type === 'photo' ? commandeClipPhoto(options) : commandeClipVideo(options);
       const { code, erreurs } = await executer(FFMPEG, args, { signal });
       if (code !== 0) throw new Error(`Rendu impossible pour « ${media.nom} » : ${derniereLigne(erreurs)}`);

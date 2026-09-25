@@ -1,7 +1,7 @@
 // Tests des calculs, sans ffmpeg : npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { planifier, ordonner, reperer, meilleurPassage, ecartEmpreintes, remplit, FPS } from '../public/plan.js';
+import { planifier, ordonner, reperer, meilleurPassage, ecartEmpreintes, remplit, definitionFinale, dimensions, FPS } from '../public/plan.js';
 import { dateDepuisNom, jourDepuisNom, dateExif, nettete, empreinte, filtreOrientation } from '../server/medias.js';
 import { appliquerChangements, typeDe } from '../server/stockage.js';
 
@@ -142,6 +142,11 @@ test('changements envoyés par la page : vérifiés et bornés', () => {
   });
   assert.equal(p.nom, 'Angleterre  2026');
   assert.deepEqual(p.reglages, { format: 'paysage', tempsPhoto: 2, tempsVideo: 8, musique: null, zoom: true });
+  appliquerChangements(p, { reglages: { definition: '4k' } });
+  assert.equal(p.reglages.definition, undefined, 'valeur inconnue refusée');
+  appliquerChangements(p, { reglages: { definition: '2160' } });
+  assert.equal(p.reglages.definition, '2160');
+  delete p.reglages.definition;
   assert.deepEqual(p.ordre, ['v0000001', 'p0000001']);
   assert.equal(p.medias.v0000001.debutExtrait, 10);
   assert.equal(p.medias.v0000001.choix, 'garder');
@@ -152,4 +157,18 @@ test('changements envoyés par la page : vérifiés et bornés', () => {
   assert.equal(p.ordre, null);
   assert.equal(p.medias.v0000001.debutExtrait, null);
   assert.throws(() => appliquerChangements(p, null));
+});
+
+test('définition : 4K automatique quand les fichiers sont assez fins', () => {
+  const photo12mp = { largeur: 4000, hauteur: 3000 }, video1080 = { largeur: 1920, hauteur: 1080 }, video4k = { largeur: 3840, hauteur: 2160 };
+  assert.equal(definitionFinale('auto', [photo12mp, photo12mp, video1080]), 2160);
+  assert.equal(definitionFinale('auto', [photo12mp, video1080, video1080]), 1080);
+  assert.equal(definitionFinale('auto', [video4k]), 2160);
+  assert.equal(definitionFinale('auto', []), 1080);
+  assert.equal(definitionFinale('1080', [photo12mp]), 1080);
+  assert.equal(definitionFinale('2160', [video1080]), 2160);
+  assert.deepEqual(dimensions('paysage', 2160), { largeur: 3840, hauteur: 2160 });
+  assert.deepEqual(dimensions('vertical', 1080), { largeur: 1080, hauteur: 1920 });
+  const plan = planifier(projet([photo('p0000001', 1, { largeur: 4000, hauteur: 3000 }), musique()]));
+  assert.deepEqual([plan.definition, plan.largeur, plan.hauteur], [2160, 3840, 2160]);
 });

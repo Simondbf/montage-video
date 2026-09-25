@@ -23,6 +23,23 @@ export const remplit = (largeur, hauteur, format) => {
   return largeur > 0 && hauteur > 0 && Math.abs(Math.log((largeur / hauteur) / (f.largeur / f.hauteur))) < Math.log(1.2);
 };
 
+// Définition de la vidéo finale. En automatique : 4K dès que la plupart des
+// photos et vidéos gardées ont au moins cette finesse (une photo de
+// téléphone de 12 mégapixels fait 4000 × 3000), sinon Full HD.
+export const DEFINITIONS = { 1080: 'Full HD 1080p', 2160: '4K 2160p' };
+export const definitionFinale = (reglage, medias) => {
+  if (reglage === '1080' || reglage === '2160') return Number(reglage);
+  if (!medias.length) return 1080;
+  const fins = medias.filter((m) => Math.max(m.largeur || 0, m.hauteur || 0) >= 3200).length;
+  return fins >= 0.6 * medias.length ? 2160 : 1080;
+};
+// Taille de l'image finale, en pixels.
+export const dimensions = (format, definition) => {
+  const f = FORMATS[format] || FORMATS.paysage;
+  const k = definition === 2160 ? 2 : 1;
+  return { largeur: f.largeur * k, hauteur: f.hauteur * k };
+};
+
 export const SEUIL_FLOU = 30;
 export const ECART_DOUBLON = 10;        // bits d'empreinte différents, sur 64
 export const DELAI_RAFALE = 120 * 1000; // deux photos d'une rafale : moins de 2 minutes d'écart
@@ -202,6 +219,8 @@ export const planifier = (projet) => {
     elements.push(e);
   });
   const duree = elements.length ? elements[elements.length - 1].f1 / FPS : 0;
+  const definition = definitionFinale(r.definition, choisis);
+  const format = FORMATS[r.format] ? r.format : 'paysage';
   const etat = new Map();
   for (const m of liste) etat.set(m.id, ecartes.has(m.id) ? { inclus: false, raison: ecartes.get(m.id) } : { inclus: true, raison: null });
   let erreur = null;
@@ -209,6 +228,7 @@ export const planifier = (projet) => {
   else if (!elements.length) erreur = 'vide';
   return {
     elements, ordre: liste.map((m) => m.id), etat, auto,
+    format, definition, ...dimensions(format, definition),
     musique: musique ? { id: musique.id, bpm, premier, decalage: arr(decalage), duree: musique.duree } : null,
     dispo: Number.isFinite(dispo) ? dispo : null,
     utilises: elements.reduce((s, e) => s + e.temps, 0),

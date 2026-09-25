@@ -41,7 +41,7 @@ p { margin: .3rem 0 .7rem; }
 .espace { flex: 1; }
 .logo { font-weight: 700; font-size: 1.2rem; color: var(--texte); text-decoration: none; letter-spacing: -.01em; }
 .logo::before { content: ""; display: inline-block; width: .9em; height: .62em; margin-right: .4em; border-radius: 3px; background: var(--accent); vertical-align: .02em; }
-.titre { font: inherit; font-weight: 600; font-size: 1.05rem; color: var(--texte); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 4px 8px; min-width: 0; flex: 0 1 26em; }
+.titre { font: inherit; font-weight: 600; font-size: 1.05rem; color: var(--texte); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 4px 8px; min-width: 0; width: min(26em, 100%); text-align: center; }
 .titre:hover, .titre:focus { border-color: var(--trait); background: var(--surface-2); }
 
 /* Boutons et champs */
@@ -65,10 +65,11 @@ input[type=text], input[type=password] { font: inherit; color: var(--texte); bac
 
 /* Connexion */
 .connexion { max-width: 340px; margin: 16vh auto 0; padding: 0 18px; }
-.connexion .logo { display: block; font-size: 1.6rem; margin-bottom: 18px; }
+.connexion .logo { display: block; font-size: 1.6rem; margin-bottom: 18px; text-align: center; }
 
 /* Accueil */
-.intro { margin: 8px 0 24px; max-width: 760px; }
+.intro { margin: 8px auto 24px; max-width: 760px; text-align: center; }
+.intro .ligne { justify-content: center; text-align: left; }
 .projets { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
 .projets li { background: var(--surface); border: 1px solid var(--trait); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--ombre); }
 .projets .couverture { aspect-ratio: 16 / 9; background: var(--surface-2) center / cover no-repeat; display: block; }
@@ -142,3 +143,14 @@ input[type=text], input[type=password] { font: inherit; color: var(--texte); bac
   .titre { font-size: 1rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* En-tête : le titre au milieu, les liens de part et d'autre. Sur téléphone,
+   le titre prend toute la première ligne. */
+.barre { display: grid !important; grid-template-columns: 1fr minmax(0, auto) 1fr; align-items: center; gap: 8px 12px; }
+.barre > :nth-child(1) { justify-self: start; }
+.barre > :nth-child(2) { justify-self: center; text-align: center; min-width: 0; }
+.barre > :nth-child(3) { justify-self: end; text-align: right; }
+@media (max-width: 560px) {
+  .barre { grid-template-columns: 1fr 1fr; }
+  .barre > :nth-child(2) { grid-column: 1 / -1; grid-row: 1; }
+}

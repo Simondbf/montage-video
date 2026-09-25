@@ -67,7 +67,7 @@ export const modifierProjet = (id, changer) => {
   return suite;
 };
 
-export const REGLAGES_DEFAUT = { format: 'paysage', tempsPhoto: 2, tempsVideo: 4, musique: null, zoom: true };
+export const REGLAGES_DEFAUT = { format: 'paysage', definition: 'auto', tempsPhoto: 2, tempsVideo: 4, musique: null, zoom: true };
 
 export const creerProjet = async (nom) => {
   let id;
@@ -124,6 +124,7 @@ export const appliquerChangements = (projet, brut) => {
   if (r && typeof r === 'object') {
     const g = projet.reglages;
     if (['paysage', 'vertical'].includes(r.format)) g.format = r.format;
+    if (['auto', '1080', '2160'].includes(r.definition)) g.definition = r.definition;
     if ([1, 2, 4].includes(r.tempsPhoto)) g.tempsPhoto = r.tempsPhoto;
     if ([2, 4, 8].includes(r.tempsVideo)) g.tempsVideo = r.tempsVideo;
     if (r.musique === null || (idValide(r.musique) && projet.medias[r.musique]?.type === 'musique')) g.musique = r.musique;

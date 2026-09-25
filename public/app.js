@@ -1,6 +1,6 @@
 // Montage : interface. Aucune bibliothèque ; le plan de montage vient de
 // plan.js, le même que celui du serveur.
-import { planifier, FORMATS, RAISONS, remplit } from './plan.js';
+import { planifier, FORMATS, RAISONS, DEFINITIONS, remplit } from './plan.js';
 
 const $ = (id) => document.getElementById(id);
 const creer = (balise, attributs = {}, ...enfants) => {
@@ -268,11 +268,16 @@ const afficherMusiques = () => {
 const afficherReglages = () => {
   const r = e.projet.reglages;
   document.querySelectorAll('input[name=format]').forEach((i) => { i.checked = i.value === r.format; });
+  document.querySelectorAll('input[name=definition]').forEach((i) => { i.checked = i.value === (r.definition || 'auto'); });
+  $('definition-info').textContent = (r.definition || 'auto') === 'auto'
+    ? `Ici : ${DEFINITIONS[e.plan.definition]}, d'après la finesse de tes photos et vidéos.`
+    : '';
   document.querySelectorAll('input[name=tempsPhoto]').forEach((i) => { i.checked = Number(i.value) === r.tempsPhoto; });
   document.querySelectorAll('input[name=tempsVideo]').forEach((i) => { i.checked = Number(i.value) === r.tempsVideo; });
   $('zoom').checked = r.zoom !== false;
 };
 document.querySelectorAll('input[name=format]').forEach((i) => i.addEventListener('change', () => changer({ reglages: { format: i.value } })));
+document.querySelectorAll('input[name=definition]').forEach((i) => i.addEventListener('change', () => changer({ reglages: { definition: i.value } })));
 document.querySelectorAll('input[name=tempsPhoto]').forEach((i) => i.addEventListener('change', () => changer({ reglages: { tempsPhoto: Number(i.value) } })));
 document.querySelectorAll('input[name=tempsVideo]').forEach((i) => i.addEventListener('change', () => changer({ reglages: { tempsVideo: Number(i.value) } })));
 $('zoom').addEventListener('change', () => changer({ reglages: { zoom: $('zoom').checked } }));
@@ -289,7 +294,7 @@ const afficherResume = () => {
   else if (!plan.ordre.length) texte = 'Ajoute des photos et des vidéos.';
   else if (plan.erreur === 'vide') texte = 'Tout est mis de côté : garde au moins une image.';
   else {
-    texte = `${duree(plan.duree)} de vidéo : ${pluriel(photos, 'photo')} et ${pluriel(videos, 'vidéo')}`;
+    texte = `${duree(plan.duree)} de vidéo en ${plan.definition === 2160 ? '4K' : 'Full HD'} : ${pluriel(photos, 'photo')} et ${pluriel(videos, 'vidéo')}`;
     if (ecartees.length) texte += `, ${ecartees.length} mise${ecartees.length > 1 ? 's' : ''} de côté`;
     texte += '.';
     if (place) texte += ` La musique est trop courte pour tout montrer : choisis 1 temps par photo, ou une musique plus longue.`;

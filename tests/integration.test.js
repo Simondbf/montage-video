@@ -133,16 +133,16 @@ test('rendu paysage : durée, images changées pile sur les temps, photo redress
   assert.ok(moyenne(images.at(-1)) < 0.3 * moyenne(images.at(-35)), 'fondu de sortie');
 });
 
-test('rendu vertical : 1080 × 1920, la vidéo en hauteur remplit l\'écran', { skip: sauter }, async () => {
-  const projet = projetDepuisAnalyses({ format: 'vertical', tempsVideo: 2 }, ['VID_20260815_103000.mp4', 'IMG_20260815_110000.jpg', 'musique.mp3']);
+test('rendu vertical en 4K : 2160 × 3840, la vidéo en hauteur remplit l\'écran', { skip: sauter }, async () => {
+  const projet = projetDepuisAnalyses({ format: 'vertical', tempsVideo: 2, definition: '2160' }, ['VID_20260815_103000.mp4', 'IMG_20260815_110000.jpg', 'musique.mp3']);
   const plan = planifier(projet);
   const sortie = path.join(racine, 'vertical.mp4');
   await rendre({ plan, projet, cheminMedia: (m) => m.chemin, dossierTravail: path.join(racine, 'travail2'), sortie });
   const v = (await sonde(sortie)).streams.find((s) => s.codec_type === 'video');
-  assert.deepEqual([v.width, v.height], [1080, 1920]);
-  const px = await imageCouleur(sortie, 0.8, 1080, 1920);
+  assert.deepEqual([v.width, v.height], [2160, 3840]);
+  const px = await imageCouleur(sortie, 0.8, 2160, 3840);
   // testsrc2 en hauteur remplit tout : pas de fond flou, donc des couleurs vives jusqu'aux bords.
-  const bord = px(20, 960);
+  const bord = px(40, 1920);
   assert.ok(Math.max(...bord) - Math.min(...bord) > 100, `bord de la vidéo, couleurs franches : ${bord}`);
 });
 

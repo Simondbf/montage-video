@@ -13,7 +13,7 @@ Tu crées un projet, tu envoies les photos, les vidéos et une musique (depuis l
 
 Tout reste modifiable : garder une photo mise de côté, en retirer une autre, changer l'ordre, choisir un autre passage d'une vidéo. Un aperçu joue la musique avec les images, pour juger du rythme avant de fabriquer la vraie vidéo.
 
-La vidéo produite est en MP4 (H.264, AAC), 1920 × 1080 en paysage ou 1080 × 1920 en vertical, à 30 images par seconde.
+La vidéo produite est en MP4 (H.264 en haute qualité, son AAC 256 kbit/s), à 30 images par seconde, en paysage ou en vertical. Sa définition se règle : **Automatique** (4K dès que la plupart des photos et vidéos gardées sont assez fines, ce qui est le cas des photos de téléphone, sinon Full HD), **Full HD 1080p** ou **4K 2160p**.
 
 ## Installation sur le VPS
 
@@ -75,7 +75,7 @@ depuis le site efface tout son dossier.
 1. **Créer un projet**, puis **Choisir des fichiers** : photos, vidéos et au moins une musique. On peut en envoyer des dizaines d'un coup, ou les glisser sur le cadre.
 2. Attendre l'analyse (quelques secondes par fichier).
 3. **Déroulé** : l'ordre de la vidéo. Les cartes grisées sont mises de côté, avec la raison ; « Garder » les remet, « Retirer » en enlève. Les flèches changent l'ordre ; « Revenir à l'ordre des dates » annule. Pour une vidéo, le curseur choisit le passage.
-4. **Réglages** : paysage ou vertical, durée d'une photo et d'une vidéo en temps de musique, zoom lent.
+4. **Réglages** : paysage ou vertical, définition (automatique, Full HD ou 4K), durée d'une photo et d'une vidéo en temps de musique, zoom lent.
 5. **Aperçu** : « Lire » joue la musique avec les images. Toucher une carte y va directement.
 6. **Fabriquer la vidéo**, puis **Télécharger**.
 

@@ -25,8 +25,8 @@
 <!-- ------------------------------ Accueil ------------------------------ -->
 <div id="vue-accueil" class="vue" hidden>
   <header class="barre">
+    <span></span>
     <a class="logo" href="#/">Montage</a>
-    <span class="espace"></span>
     <button class="lien" type="button" data-action="deconnexion">Se déconnecter</button>
   </header>
   <main class="page">
@@ -48,7 +48,6 @@
   <header class="barre">
     <a class="lien" href="#/">Tous les projets</a>
     <input type="text" id="titre-projet" class="titre" maxlength="80" aria-label="Nom du projet">
-    <span class="espace"></span>
     <span id="sauvegarde" class="discret petit" aria-live="polite"></span>
   </header>
   <main class="page projet">
@@ -96,6 +95,13 @@
           <span class="etiquette">Format</span>
           <label><input type="radio" name="format" value="paysage"> Paysage 16:9 (écran, télé)</label>
           <label><input type="radio" name="format" value="vertical"> Vertical 9:16 (téléphone)</label>
+        </div>
+        <div class="choix-groupe" role="radiogroup" aria-label="Définition">
+          <span class="etiquette">Définition de la vidéo finale</span>
+          <label><input type="radio" name="definition" value="auto"> Automatique</label>
+          <label><input type="radio" name="definition" value="1080"> Full HD 1080p</label>
+          <label><input type="radio" name="definition" value="2160"> 4K 2160p</label>
+          <span id="definition-info" class="petit discret"></span>
         </div>
         <div class="choix-groupe" role="radiogroup" aria-label="Durée d'une photo">
           <span class="etiquette">Une photo dure</span>
