@@ -44,17 +44,19 @@ Dans la zone DNS de `soleiljaune.be`, ajoute un enregistrement **A**
 
 ### 3. nginx et le certificat
 
-nginx ne lit pas le dossier du dépôt : le fichier doit exister dans
-`/etc/nginx/sites-available/` avant d'être activé, sinon `nginx -t` échoue.
-Ouvre-le avec `nano /etc/nginx/sites-available/montage.soleiljaune.be`, colle
-le contenu de `etc/nginx/sites-available/montage.soleiljaune.be` (dans le
-dépôt), puis enregistre (Ctrl+O, Entrée, Ctrl+X). Ensuite :
+Une fois l'enregistrement DNS en place, dans le dossier du site :
 
 ```bash
-ln -sf /etc/nginx/sites-available/montage.soleiljaune.be /etc/nginx/sites-enabled/
-nginx -t && systemctl reload nginx
-certbot --nginx -d montage.soleiljaune.be
+bash deploiement/nginx.sh
 ```
+
+Le script installe la configuration nginx du dépôt (`deploiement/nginx.conf`),
+obtient le certificat HTTPS au premier lancement, puis recharge nginx. Rien à
+créer à la main dans `/etc/nginx`. Si nginx refuse la configuration, l'ancienne
+est remise en place ; si le certificat est refusé, c'est presque toujours que
+l'enregistrement DNS n'est pas encore visible : attendre un peu et relancer.
+Pour changer la configuration nginx : modifier `deploiement/nginx.conf` dans le
+dépôt, puis `maj` et relancer le script.
 
 ### Mise à jour
 
