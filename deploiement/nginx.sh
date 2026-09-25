@@ -4,8 +4,10 @@
 #   bash deploiement/nginx.sh
 #
 # Pour chaque site : au premier lancement, il obtient aussi le certificat
-# HTTPS (Let's Encrypt). On peut le relancer sans risque : si nginx refuse
-# une configuration, l'ancienne est remise en place.
+# HTTPS (Let's Encrypt). Avant de le demander, il vérifie lui-même que le
+# domaine arrive bien sur ce site, et sinon explique ce qui répond à la place.
+# On peut le relancer sans risque : si nginx refuse une configuration,
+# l'ancienne est remise en place.
 set -uo pipefail
 
 # Domaine, port du conteneur, fichier de configuration dans deploiement/.
@@ -14,7 +16,40 @@ SITES=(
 )
 
 DEPOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Dossier où certbot dépose ses fichiers de vérification (méthode « webroot »).
+WEBROOT=/var/www/letsencrypt
 if [ "$(id -u)" -ne 0 ]; then echo "À lancer en root."; exit 1; fi
+
+# Vérifie qu'un fichier déposé dans WEBROOT est bien servi pour ce domaine,
+# d'abord par nginx sur ce serveur, puis par Internet (comme Let's Encrypt).
+verifier_domaine() {
+  local DOMAINE="$1"
+  command -v curl >/dev/null || { echo "(curl absent : vérification sautée)"; return 0; }
+  local JETON="verification-$(date +%s)-$RANDOM"
+  local FICHIER="$WEBROOT/.well-known/acme-challenge/$JETON"
+  mkdir -p "$WEBROOT/.well-known/acme-challenge"
+  echo "$JETON" > "$FICHIER"
+  local LOCAL PUBLIC CODE
+  LOCAL="$(curl -s -m 10 -H "Host: $DOMAINE" "http://127.0.0.1/.well-known/acme-challenge/$JETON" 2>/dev/null)"
+  PUBLIC="$(curl -s -m 15 "http://$DOMAINE/.well-known/acme-challenge/$JETON" 2>/dev/null)"
+  CODE="$(curl -s -m 15 -o /dev/null -w '%{http_code} depuis %{remote_ip}' "http://$DOMAINE/.well-known/acme-challenge/$JETON" 2>/dev/null)"
+  rm -f "$FICHIER"
+  if [ "$LOCAL" != "$JETON" ]; then
+    echo "Sur ce serveur, nginx ne sert pas $DOMAINE avec la configuration de ce dépôt."
+    echo "Autres fichiers nginx qui parlent de $DOMAINE (un doublon prend la place) :"
+    grep -rl --exclude="$DOMAINE" "$DOMAINE" /etc/nginx/ 2>/dev/null | sed 's/^/  /' || true
+    nginx -T 2>&1 | grep -i "conflicting server name" | sed 's/^/  /' || true
+    return 1
+  fi
+  if [ "$PUBLIC" != "$JETON" ]; then
+    echo "nginx est prêt, mais par Internet $DOMAINE n'arrive pas ici (réponse $CODE)."
+    echo "  Adresse du domaine : $(getent ahostsv4 "$DOMAINE" 2>/dev/null | awk 'NR==1{print $1}')"
+    echo "  Adresses de ce serveur : $(hostname -I 2>/dev/null)"
+    echo "  Vérifie l'enregistrement A chez Infomaniak, et qu'aucun AAAA (IPv6) ne pointe ailleurs."
+    return 1
+  fi
+  return 0
+}
 
 installer() {
   local DOMAINE="$1" PORT="$2" MODELE="$DEPOT/deploiement/$3"
@@ -47,26 +82,36 @@ installer() {
       return 1
     fi
     systemctl reload nginx
+    sleep 1
   }
 
+  mkdir -p "$WEBROOT"
   if [ ! -f "$CERTIFICAT" ]; then
     echo "Premier lancement : demande du certificat HTTPS pour $DOMAINE."
-    # Le temps que Let's Encrypt vérifie le domaine : le site en HTTP seulement.
+    # Le temps d'obtenir le certificat : le site en HTTP, et le dossier de
+    # vérification de Let's Encrypt servi tel quel.
     cat > "$CIBLE" <<FIN
 # Provisoire, écrit par deploiement/nginx.sh le temps d'obtenir le certificat.
 server {
     listen 80;
     server_name $DOMAINE;
+    location ^~ /.well-known/acme-challenge/ {
+        root $WEBROOT;
+        default_type text/plain;
+    }
     location / {
         proxy_pass http://127.0.0.1:$PORT;
     }
 }
 FIN
     activer || return 1
-    # certonly : certbot ne touche pas aux fichiers de configuration, qui
-    # restent ceux du dépôt. Après chaque renouvellement, nginx est rechargé.
-    if ! certbot certonly --nginx -d "$DOMAINE" --non-interactive --agree-tos --deploy-hook "systemctl reload nginx"; then
-      echo "Certificat refusé. Vérifie que l'enregistrement DNS de $DOMAINE pointe bien vers ce serveur, puis relance ce script."
+    # Vérification maison d'abord : un échec chez Let's Encrypt compte dans
+    # leurs limites (5 par heure et par domaine).
+    verifier_domaine "$DOMAINE" || { echo "Certificat non demandé. Relance ce script une fois le problème réglé."; return 1; }
+    # certonly + webroot : certbot dépose un fichier dans WEBROOT et ne touche
+    # jamais à la configuration nginx. Après chaque renouvellement, nginx est rechargé.
+    if ! certbot certonly --webroot -w "$WEBROOT" -d "$DOMAINE" --non-interactive --agree-tos --deploy-hook "systemctl reload nginx"; then
+      echo "Let's Encrypt a refusé le certificat de $DOMAINE (détails ci-dessus)."
       return 1
     fi
   fi

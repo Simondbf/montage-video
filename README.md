@@ -53,8 +53,10 @@ bash deploiement/nginx.sh
 Le script installe la configuration nginx du dépôt (`deploiement/nginx.conf`),
 obtient le certificat HTTPS au premier lancement, puis recharge nginx. Rien à
 créer à la main dans `/etc/nginx`. Si nginx refuse la configuration, l'ancienne
-est remise en place ; si le certificat est refusé, c'est presque toujours que
-l'enregistrement DNS n'est pas encore visible : attendre un peu et relancer.
+est remise en place. Avant de demander le certificat, le script vérifie
+lui-même que le domaine arrive bien sur ce site ; sinon il dit ce qui cloche
+(fichier nginx en double, enregistrement DNS qui pointe ailleurs) et ne demande
+rien, pour ne pas épuiser les essais autorisés par Let's Encrypt.
 Pour changer la configuration nginx : modifier `deploiement/nginx.conf` dans le
 dépôt, puis `maj` et relancer le script.
 
