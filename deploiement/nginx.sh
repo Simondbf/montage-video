@@ -20,6 +20,42 @@ DEPOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEBROOT=/var/www/letsencrypt
 if [ "$(id -u)" -ne 0 ]; then echo "À lancer en root."; exit 1; fi
 
+# Adresses IP précises sur lesquelles d'autres sites nginx écoutent (par
+# exemple « listen 178.105.235.106:80; »). nginx ne propose une connexion
+# arrivée sur une de ces adresses qu'aux sites qui l'écoutent eux aussi :
+# sans elles, nos sites seraient ignorés et un autre site répondrait.
+adresses_precises() {
+  nginx -T 2>/dev/null \
+    | grep -oE "^[[:space:]]*listen[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:$1([^0-9]|\$)" \
+    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -u | tr '\n' ' '
+}
+
+# Recopie une configuration en ajoutant ces adresses à nos « listen ».
+avec_adresses() {
+  awk -v a80="$A80" -v a443="$A443" '
+    { print }
+    /^[[:space:]]*listen[[:space:]]+80;/      { n = split(a80, t, " ");  for (i = 1; i <= n; i++) print "    listen " t[i] ":80;" }
+    /^[[:space:]]*listen[[:space:]]+443 ssl;/ { n = split(a443, t, " "); for (i = 1; i <= n; i++) print "    listen " t[i] ":443 ssl;" }
+  '
+}
+
+# Quand le domaine n'arrive pas sur nginx par l'adresse publique : qui
+# répond à sa place sur le port 80 ?
+diagnostiquer_port80() {
+  local DOMAINE="$1"
+  echo "  --- Ce qui répond sur le port 80 (à m'envoyer si besoin) :"
+  ss -ltnpH 'sport = :80' 2>/dev/null | awk '{print "  écoute : " $4 "  " $6}'
+  if command -v docker >/dev/null; then
+    docker ps --format '{{.Names}}  {{.Ports}}' 2>/dev/null | grep -E '(^|[ ,])(0\.0\.0\.0|\[?::\]?|[0-9.]+):80->' | sed 's/^/  conteneur qui publie le port 80 : /'
+  fi
+  nginx -T 2>/dev/null | grep -E '^[[:space:]]*listen[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:80([^0-9]|$)' | sed 's/^[[:space:]]*/  nginx, écoute sur une adresse précise : /'
+  curl -s -m 10 -o /dev/null -D - "http://$DOMAINE/.well-known/acme-challenge/test" 2>/dev/null \
+    | grep -iE '^(HTTP/|server:|content-type:|x-powered-by:)' | tr -d '\r' | sed 's/^/  réponse reçue : /'
+  if command -v iptables >/dev/null; then
+    iptables -t nat -S 2>/dev/null | grep -E -- '--dport 80( |$)' | sed 's/^/  règle réseau : /'
+  fi
+}
+
 # Vérifie qu'un fichier déposé dans WEBROOT est bien servi pour ce domaine,
 # d'abord par nginx sur ce serveur, puis par Internet (comme Let's Encrypt).
 verifier_domaine() {
@@ -45,7 +81,14 @@ verifier_domaine() {
     echo "nginx est prêt, mais par Internet $DOMAINE n'arrive pas ici (réponse $CODE)."
     echo "  Adresse du domaine : $(getent ahostsv4 "$DOMAINE" 2>/dev/null | awk 'NR==1{print $1}')"
     echo "  Adresses de ce serveur : $(hostname -I 2>/dev/null)"
-    echo "  Vérifie l'enregistrement A chez Infomaniak, et qu'aucun AAAA (IPv6) ne pointe ailleurs."
+    local IP_DOMAINE
+    IP_DOMAINE="$(getent ahostsv4 "$DOMAINE" 2>/dev/null | awk 'NR==1{print $1}')"
+    if [ -n "$IP_DOMAINE" ] && hostname -I 2>/dev/null | tr ' ' '\n' | grep -qx "$IP_DOMAINE"; then
+      echo "  Le DNS est bon : c'est un autre programme de ce serveur qui répond à la place de nginx."
+      diagnostiquer_port80 "$DOMAINE"
+    else
+      echo "  Vérifie l'enregistrement A chez Infomaniak, et qu'aucun AAAA (IPv6) ne pointe ailleurs."
+    fi
     return 1
   fi
   return 0
@@ -86,11 +129,14 @@ installer() {
   }
 
   mkdir -p "$WEBROOT"
+  A80="$(adresses_precises 80)"
+  A443="$(adresses_precises 443)"
+  if [ -n "$A80$A443" ]; then echo "D'autres sites nginx écoutent sur une adresse précise ($(echo $A80 $A443 | tr ' ' '\n' | sort -u | xargs)) : ce site l'écoute aussi."; fi
   if [ ! -f "$CERTIFICAT" ]; then
     echo "Premier lancement : demande du certificat HTTPS pour $DOMAINE."
     # Le temps d'obtenir le certificat : le site en HTTP, et le dossier de
     # vérification de Let's Encrypt servi tel quel.
-    cat > "$CIBLE" <<FIN
+    avec_adresses > "$CIBLE" <<FIN
 # Provisoire, écrit par deploiement/nginx.sh le temps d'obtenir le certificat.
 server {
     listen 80;
@@ -116,7 +162,7 @@ FIN
     fi
   fi
 
-  cat "$MODELE" > "$CIBLE"
+  avec_adresses < "$MODELE" > "$CIBLE"
   activer || return 1
   echo "C'est en ligne : https://$DOMAINE"
 }
