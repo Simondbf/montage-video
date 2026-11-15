@@ -95,3 +95,7 @@ npm install
 npm test        # ffmpeg doit être installé
 DATA_DIR=./data npm start
 ```
+
+## Déploiement automatique depuis GitHub
+
+Le dépôt contient un workflow GitHub Actions qui lance `npm test` sur les changements et, **pour les pushes sur `main` uniquement**, peut mettre à jour le VPS en SSH après succès des tests. Le déploiement reste désactivé tant que `DEPLOY_ENABLED=true` et les secrets SSH ne sont pas configurés. Voir [le guide d'activation](deploiement/DEPLOIEMENT_AUTOMATIQUE.md). L'application garde le port `3013` et ses médias dans le volume persistant `./data`.
